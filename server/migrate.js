@@ -58,6 +58,25 @@ async function migrate() {
       admin_id integer not null references admins(id) on delete cascade,
       expires_at timestamptz not null
     );
+    create table if not exists showcase (
+      id serial primary key,
+      img_path text,
+      caption text,
+      sort int not null default 0,
+      created_at timestamptz not null default now()
+    );
+    create table if not exists releases (
+      id serial primary key,
+      title text not null default '',
+      img_path text,
+      soundcloud text not null default '',
+      spotify text not null default '',
+      apple text not null default '',
+      youtube text not null default '',
+      sort int not null default 0,
+      created_at timestamptz not null default now()
+    );
+    alter table merch add column if not exists sizes text not null default '';
   `);
 
   // create first admin from env if none exists yet
