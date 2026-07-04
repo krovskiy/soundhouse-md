@@ -157,6 +157,19 @@ async function upload(file) {
   return (await res.json()).path;
 }
 
+async function deleteMedia(path) {
+  if (!path || !path.startsWith("/media/")) return; // only ever touch our uploads
+  try {
+    await api("/api/admin/media", {
+      method: "DELETE",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ path }),
+    });
+  } catch (e) {
+    console.warn("could not delete old media:", path, e);
+  }
+}
+
 // ---- generic section renderer ----
 // fields: [{ key, label, type }]  type: text | textarea | number | image | audio
 function section(cfg) {
@@ -175,6 +188,16 @@ const SECTIONS = {
     row: (m) => m.name,
     hasTracks: true,
   }),
+  showcase: section({
+    title: "showcase",
+    base: "/api/admin/showcase",
+    fields: [
+      { key: "img_path", label: "image", type: "image", aspect: 16 / 9 },
+      { key: "caption", label: "caption", type: "text" },
+      { key: "sort", label: "sort", type: "number" },
+    ],
+    row: (s) => `${s.caption || "(no caption)"}`,
+  }),
   services: section({
     title: "services",
     base: "/api/admin/services",
@@ -192,6 +215,11 @@ const SECTIONS = {
     fields: [
       { key: "name", label: "name", type: "text" },
       { key: "price", label: "price", type: "text" },
+      {
+        key: "sizes",
+        label: "sizes (comma-separated, blank = none)",
+        type: "text",
+      },
       { key: "img_path", label: "image", type: "image" },
       { key: "sort", label: "sort", type: "number" },
     ],
@@ -206,6 +234,20 @@ const SECTIONS = {
       { key: "sort", label: "sort", type: "number" },
     ],
     row: (b) => `${b.active ? "●" : "○"} ${b.text}`,
+  }),
+  releases: section({
+    title: "releases",
+    base: "/api/admin/releases",
+    fields: [
+      { key: "title", label: "title", type: "text" },
+      { key: "img_path", label: "cover (1000x1000)", type: "image", aspect: 1 },
+      { key: "soundcloud", label: "soundcloud url", type: "text" },
+      { key: "spotify", label: "spotify url", type: "text" },
+      { key: "apple", label: "apple music url", type: "text" },
+      { key: "youtube", label: "youtube url", type: "text" },
+      { key: "sort", label: "sort", type: "number" },
+    ],
+    row: (r) => r.title || "(untitled)",
   }),
 };
 
@@ -247,6 +289,7 @@ function fieldInputs(cfg, data = {}) {
   const wrap = document.createElement("div");
   wrap.className = "adm-fields";
   const getters = {};
+  const mediaFields = [];
 
   for (const f of cfg.fields) {
     const g = document.createElement("div");
@@ -259,10 +302,19 @@ function fieldInputs(cfg, data = {}) {
       el.value = data[f.key] ?? "";
       getters[f.key] = () => el.value;
     } else if (f.type === "image" || f.type === "audio") {
-      // hidden path holder + a file picker that uploads immediately
       el = document.createElement("input");
       el.value = data[f.key] ?? "";
       el.placeholder = "/media/...";
+      el.className = "adm-input";
+
+      // lifecycle state for this media field
+      const media = {
+        getValue: () => el.value,
+        persisted: data[f.key] ?? "", // saved in DB — only drop on save
+        session: "", // last upload this session — safe to drop now
+      };
+      mediaFields.push(media);
+
       const file = document.createElement("input");
       file.type = "file";
       file.accept = f.type === "image" ? "image/*" : "audio/*";
@@ -281,14 +333,19 @@ function fieldInputs(cfg, data = {}) {
             }
             toUpload = new File([cropped], "crop.jpg", { type: "image/jpeg" });
           }
-          el.value = await upload(toUpload);
+          const newPath = await upload(toUpload);
+          // an earlier upload from this same session becomes garbage — remove it
+          if (media.session && media.session !== newPath)
+            deleteMedia(media.session);
+          media.session = newPath;
+          el.value = newPath;
         } catch (e) {
           console.error("FAILED AT:", e);
           alert("upload failed: " + (e?.message || e));
         }
         file.disabled = false;
       });
-      el.className = "adm-input";
+
       g.appendChild(el);
       g.appendChild(file);
       getters[f.key] = () => el.value;
@@ -320,6 +377,27 @@ function fieldInputs(cfg, data = {}) {
     wrap,
     collect: () =>
       Object.fromEntries(Object.entries(getters).map(([k, f]) => [k, f()])),
+
+    // call AFTER a save succeeds: whatever the DB used to point at (persisted)
+    // is now unreferenced if the field changed, so delete it from disk.
+    commit: () => {
+      for (const m of mediaFields) {
+        const now = m.getValue();
+        if (m.persisted && m.persisted !== now) deleteMedia(m.persisted);
+        m.persisted = now; // new saved baseline
+        m.session = ""; // it's persisted now, no longer a loose upload
+      }
+    },
+
+    // call when leaving the form WITHOUT saving: any file uploaded this session
+    // was never written to the DB, so it's junk — drop it. The persisted file
+    // is left alone because the DB still points at it.
+    discard: () => {
+      for (const m of mediaFields) {
+        if (m.session && m.session !== m.persisted) deleteMedia(m.session);
+        m.session = "";
+      }
+    },
   };
 }
 
@@ -355,6 +433,9 @@ async function renderSection(cfg) {
       .addEventListener("click", async () => {
         if (!confirm("delete this?")) return;
         await api(`${cfg.base}/${r.id}`, { method: "DELETE" });
+        // free the files this record was holding
+        for (const f of cfg.fields)
+          if (f.type === "image" || f.type === "audio") deleteMedia(r[f.key]);
         renderSection(cfg);
       });
     item
@@ -377,7 +458,7 @@ async function renderSection(cfg) {
 function openForm(cfg, data) {
   const main = document.querySelector("#main");
   const editing = !!data;
-  const { wrap, collect } = fieldInputs(cfg, data || {});
+  const { wrap, collect, commit, discard } = fieldInputs(cfg, data || {});
 
   main.innerHTML = `<div class="adm-panel"><div class="adm-panel-head">${editing ? "edit" : "new"} ${cfg.title.replace(/s$/, "")}</div><div class="adm-form" id="form"></div></div>`;
   const form = main.querySelector("#form");
@@ -388,14 +469,16 @@ function openForm(cfg, data) {
   bar.innerHTML = `<button class="adm-btn" id="save">save</button><button class="adm-btn adm-ghost" id="cancel">cancel</button>`;
   form.appendChild(bar);
 
-  bar
-    .querySelector("#cancel")
-    .addEventListener("click", () => renderSection(cfg));
+  bar.querySelector("#cancel").addEventListener("click", () => {
+    discard(); // any files uploaded but not saved are junk
+    renderSection(cfg);
+  });
   bar.querySelector("#save").addEventListener("click", async () => {
     try {
       const body = collect();
       if (editing) await jsonPost(`${cfg.base}/${data.id}`, body, "PUT");
       else await jsonPost(cfg.base, body, "POST");
+      commit(); // save landed — drop the old files this record replaced
       renderSection(cfg);
     } catch (e) {
       alert("save failed: " + e.message);
@@ -448,6 +531,8 @@ async function renderTracks(member) {
       .addEventListener("click", async () => {
         if (!confirm("delete this track?")) return;
         await api(`/api/admin/tracks/${t.id}`, { method: "DELETE" });
+        deleteMedia(t.file_path); // audio
+        deleteMedia(t.cover_path); // cover art
         renderTracks(member);
       });
     item
@@ -466,7 +551,10 @@ async function renderTracks(member) {
 function openTrackForm(member, data, trackCfg) {
   const main = document.querySelector("#main");
   const editing = !!data;
-  const { wrap, collect } = fieldInputs(trackCfg, data || { position: 1 });
+  const { wrap, collect, commit, discard } = fieldInputs(
+    trackCfg,
+    data || { position: 1 },
+  );
 
   main.innerHTML = `<div class="adm-panel"><div class="adm-panel-head">${editing ? "edit" : "new"} track</div><div class="adm-form" id="form"></div></div>`;
   const form = main.querySelector("#form");
@@ -477,9 +565,10 @@ function openTrackForm(member, data, trackCfg) {
   bar.innerHTML = `<button class="adm-btn" id="save">save</button><button class="adm-btn adm-ghost" id="cancel">cancel</button>`;
   form.appendChild(bar);
 
-  bar
-    .querySelector("#cancel")
-    .addEventListener("click", () => renderTracks(member));
+  bar.querySelector("#cancel").addEventListener("click", () => {
+    discard(); // any files uploaded but not saved are junk
+    renderTracks(member);
+  });
   bar.querySelector("#save").addEventListener("click", async () => {
     try {
       const body = collect();
@@ -487,6 +576,7 @@ function openTrackForm(member, data, trackCfg) {
       if (editing) await jsonPost(`/api/admin/tracks/${data.id}`, body, "PUT");
       else
         await jsonPost(`/api/admin/members/${member.id}/tracks`, body, "POST");
+      commit(); // save landed — drop the old audio/cover this track replaced
       renderTracks(member);
     } catch (e) {
       alert("save failed: " + e.message);
