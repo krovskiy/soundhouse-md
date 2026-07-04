@@ -3,40 +3,61 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import helmet from "@fastify/helmet";
+import cookie from "@fastify/cookie";
+import rateLimit from "@fastify/rate-limit";
+import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
+import publicRoutes from "./routes/public.js";
+import adminRoutes from "./routes/admin.js";
 import { pool } from "./db.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const app = Fastify({ logger: true });
+const mediaRoot = path.join(__dirname, "..", "media");
 
-await app.register(cors, { origin: true });
+const app = Fastify({ logger: true, bodyLimit: 1_000_000 });
 
+// security headers
+await app.register(helmet, {
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+});
+// only allow the known frontend origin to talk to the api with credentials
+const origin = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
+await app.register(cors, {
+  origin,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+});
+
+// signed cookies for sessions
+await app.register(cookie, {
+  secret: process.env.COOKIE_SECRET || "change-me",
+});
+
+// global throttle to blunt brute-force + scraping
+await app.register(rateLimit, { max: 300, timeWindow: "1 minute" });
+
+// file uploads capped at 20mb
+await app.register(multipart, {
+  limits: { fileSize: 20 * 1024 * 1024, files: 1 },
+});
+
+// serve uploaded media
 await app.register(fastifyStatic, {
-  root: path.join(__dirname, "..", "media"),
+  root: mediaRoot,
   prefix: "/media/",
 });
 
-app.get("/api/members", async () => {
-  const { rows } = await pool.query("SELECT id, name FROM members ORDER BY id");
-  return rows;
-});
-
-app.get("/api/members/:id/tracks", async (req, reply) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) {
-    return reply.code(400).send({ error: "bad id" });
-  }
-  const { rows } = await pool.query(
-    `SELECT id, position, title, file_path, cover_path
-     FROM tracks
-     WHERE member_id = $1
-     ORDER BY position`,
-    [id],
-  );
-  return rows;
-});
+await app.register(publicRoutes);
+await app.register(adminRoutes, { mediaRoot });
 
 const port = Number(process.env.PORT) || 3000;
-app.listen({ port }).then(() => {
+try {
+  await app.listen({ port });
   console.log(`api on http://localhost:${port}`);
-});
+} catch (e) {
+  app.log.error(e);
+  await pool.end();
+  process.exit(1);
+}
