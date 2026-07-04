@@ -29,7 +29,14 @@ export default async function publicRoutes(app) {
 
   app.get("/api/merch", async () => {
     const { rows } = await pool.query(
-      "select id, name, price, img_path from merch order by sort, id",
+      "select id, name, price, sizes, img_path, sort from merch order by sort, id",
+    );
+    return rows;
+  });
+
+  app.get("/api/showcase", async () => {
+    const { rows } = await pool.query(
+      "select id, img_path, caption from showcase order by sort, id",
     );
     return rows;
   });
@@ -37,6 +44,12 @@ export default async function publicRoutes(app) {
   app.get("/api/banners", async () => {
     const { rows } = await pool.query(
       "select id, text from banners where active order by sort, id",
+    );
+    return rows;
+  });
+  app.get("/api/releases", async () => {
+    const { rows } = await pool.query(
+      "select * from releases order by sort, id",
     );
     return rows;
   });
