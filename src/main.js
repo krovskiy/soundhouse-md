@@ -2,6 +2,25 @@ import "./style.css";
 import nexusImg from "./images/nexus.png";
 import WaveSurfer from "wavesurfer.js";
 
+const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
+// escape user text before it goes into innerHTML
+function esc(s) {
+  return String(s ?? "").replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        c
+      ],
+  );
+}
+
+// prefix relative /media paths with the api origin
+function media(p) {
+  if (!p) return "";
+  return p.startsWith("/media") ? API + p : p;
+}
+
 function fmt(sec) {
   if (!isFinite(sec)) return "-0:00";
   const m = Math.floor(sec / 60);
@@ -12,11 +31,7 @@ function fmt(sec) {
 document.querySelector("#app").innerHTML = /*html*/ `
   <main>
     <nav class="banner-bar">
-      <div class="banner-body">
-        <img class="banner-img" src="">
-        <p class="banner-text">NEW MEMBER: TEST</p>
-        <img class="banner-img" src="">
-      </div>
+      <div class="banner-body"></div>
     </nav>
 
     <div class="vst-interface-container" id="home">
@@ -30,7 +45,7 @@ document.querySelector("#app").innerHTML = /*html*/ `
               <h2><div class="category-title">cat</div></h2>
             </div>
           </div>
-         <div class="menu-selection-grid">
+          <div class="menu-selection-grid">
             <div class="menu-selection-left">
               <div class="menu-item" data-target="home" tabindex="0">home</div>
               <div class="menu-item selected" data-target="members" tabindex="0">members</div>
@@ -38,7 +53,6 @@ document.querySelector("#app").innerHTML = /*html*/ `
               <div class="menu-item" data-target="prices" tabindex="0">prices</div>
               <div class="menu-item" data-target="merch" tabindex="0">merch</div>
             </div>
-
             <div class="menu-selection-right"></div>
           </div>
 
@@ -61,7 +75,6 @@ document.querySelector("#app").innerHTML = /*html*/ `
           </div>
         </div>
       </div>
-
     </div>
 
     <div class="members-container" id="members">
@@ -70,58 +83,27 @@ document.querySelector("#app").innerHTML = /*html*/ `
     </div>
 
     <div class="music-container" id="tracks">
+      <h2 class="members-header">TRACKS</h2>
       <div class="track-list"></div>
     </div>
 
     <div class="services-container" id="prices">
-      <div class="services-grid">
-        <div class="service-card">
-          <h3 class="service-title">MIXING</h3>
-          <p class="service-desc">Placeholder description for mixing services.</p>
-          <span class="service-price">$--</span>
-        </div>
-        <div class="service-card">
-          <h3 class="service-title">MASTERING</h3>
-          <p class="service-desc">Placeholder description for mastering services.</p>
-          <span class="service-price">$--</span>
-        </div>
-        <div class="service-card">
-          <h3 class="service-title">PRODUCTION</h3>
-          <p class="service-desc">Placeholder description for production services.</p>
-          <span class="service-price">$--</span>
-        </div>
-      </div>
+      <h2 class="members-header">PRICES</h2>
+      <div class="services-grid"></div>
     </div>
 
     <div class="merch-container" id="merch">
-      <div class="merch-grid">
-        <div class="merch-item">
-          <div class="merch-img-placeholder"></div>
-          <p class="merch-name">ITEM NAME</p>
-          <span class="merch-price">$--</span>
-        </div>
-        <div class="merch-item">
-          <div class="merch-img-placeholder"></div>
-          <p class="merch-name">ITEM NAME</p>
-          <span class="merch-price">$--</span>
-        </div>
-        <div class="merch-item">
-          <div class="merch-img-placeholder"></div>
-          <p class="merch-name">ITEM NAME</p>
-          <span class="merch-price">$--</span>
-        </div>
-        <div class="merch-item">
-          <div class="merch-img-placeholder"></div>
-          <p class="merch-name">ITEM NAME</p>
-          <span class="merch-price">$--</span>
-        </div>
-      </div>
+      <h2 class="members-header">MERCH</h2>
+      <div class="merch-grid"></div>
     </div>
   </main>
 `;
 
+const bannerBody = document.querySelector(".banner-body");
 const membersGrid = document.querySelector(".members-grid");
 const trackList = document.querySelector(".track-list");
+const servicesGrid = document.querySelector(".services-grid");
+const merchGrid = document.querySelector(".merch-grid");
 const menuSelectionRight = document.querySelector(".menu-selection-right");
 const footerPreset = document.querySelector(".footer-preset");
 
@@ -152,7 +134,7 @@ function renderTracks(tracks) {
     row.innerHTML = /*html*/ `
       <div class="track-cover"></div>
       <span class="track-num">${String(t.position).padStart(2, "0")}</span>
-      <span class="track-title">${t.title}</span>
+      <span class="track-title">${esc(t.title)}</span>
       <div class="track-transport">
         <button class="tp-btn tp-prev" aria-label="previous">&#9198;</button>
         <button class="tp-btn tp-play" aria-label="play">&#9654;</button>
@@ -165,7 +147,7 @@ function renderTracks(tracks) {
 
     if (t.cover_path) {
       row.querySelector(".track-cover").style.backgroundImage =
-        `url(${t.cover_path})`;
+        `url(${media(t.cover_path)})`;
     }
 
     const remaining = row.querySelector(".track-remaining");
@@ -180,7 +162,7 @@ function renderTracks(tracks) {
       waveColor: "#8f7fb0",
       progressColor: "#c3b2e0",
       cursorColor: "#f2ecff",
-      url: t.file_path,
+      url: media(t.file_path),
     });
 
     ws.on("decode", (dur) => (remaining.textContent = fmt(dur)));
@@ -208,14 +190,13 @@ function renderTracks(tracks) {
 }
 
 async function loadMemberTracks(id) {
-  const res = await fetch(`/api/members/${id}/tracks`);
+  const res = await fetch(`${API}/api/members/${id}/tracks`);
   if (!res.ok) return;
-  const tracks = await res.json();
-  renderTracks(tracks);
+  renderTracks(await res.json());
 }
 
 async function loadMembers() {
-  const res = await fetch("/api/members");
+  const res = await fetch(`${API}/api/members`);
   const members = await res.json();
 
   membersGrid.innerHTML = "";
@@ -225,8 +206,14 @@ async function loadMembers() {
     card.dataset.memberId = m.id;
     card.innerHTML = /*html*/ `
       <div class="member-img-placeholder"></div>
-      <p class="member-name">${m.name}</p>
+      <p class="member-name">${esc(m.name)}</p>
     `;
+    if (m.img_path) {
+      const ph = card.querySelector(".member-img-placeholder");
+      ph.style.backgroundImage = `url(${media(m.img_path)})`;
+      ph.style.backgroundSize = "cover";
+      ph.style.backgroundPosition = "center";
+    }
     card.addEventListener("click", () => {
       document
         .querySelectorAll(".member-card")
@@ -238,16 +225,74 @@ async function loadMembers() {
   });
 }
 
+async function loadBanners() {
+  const res = await fetch(`${API}/api/banners`);
+  const banners = await res.json();
+  bannerBody.innerHTML = "";
+
+  // nothing active -> leave the bar empty
+  if (!banners.length) {
+    document.querySelector(".banner-bar").style.display = banners.length
+      ? ""
+      : "none";
+    return;
+  }
+
+  const text = banners.map((b) => b.text).join("   //   ");
+  // repeat so the scrolling strip stays filled
+  bannerBody.innerHTML = `
+    <img class="banner-img" src="">
+    <p class="banner-text">${esc(text)}</p>
+    <img class="banner-img" src="">
+  `;
+}
+
+async function loadServices() {
+  const res = await fetch(`${API}/api/services`);
+  const services = await res.json();
+  servicesGrid.innerHTML = "";
+  services.forEach((s) => {
+    const card = document.createElement("div");
+    card.className = "service-card";
+    card.innerHTML = /*html*/ `
+      <h3 class="service-title">${esc(s.title)}</h3>
+      <p class="service-desc">${esc(s.description)}</p>
+      <span class="service-price">${esc(s.price)}</span>
+    `;
+    servicesGrid.appendChild(card);
+  });
+}
+
+async function loadMerch() {
+  const res = await fetch(`${API}/api/merch`);
+  const items = await res.json();
+  merchGrid.innerHTML = "";
+  items.forEach((m) => {
+    const el = document.createElement("div");
+    el.className = "merch-item";
+    el.innerHTML = /*html*/ `
+      <div class="merch-img-placeholder"></div>
+      <p class="merch-name">${esc(m.name)}</p>
+      <span class="merch-price">${esc(m.price)}</span>
+    `;
+    if (m.img_path) {
+      const ph = el.querySelector(".merch-img-placeholder");
+      ph.style.backgroundImage = `url(${media(m.img_path)})`;
+      ph.style.backgroundSize = "cover";
+      ph.style.backgroundPosition = "center";
+    }
+    merchGrid.appendChild(el);
+  });
+}
+
+loadBanners();
 loadMembers();
+loadServices();
+loadMerch();
 
-/* ---- Right menu (preset list): filled per category + selectable ---- */
-
-// Map each left-menu category to what the right column should show.
-// Only categories listed here fetch data; add an entry to wire up more.
-// `tracks` needs a flat /api/tracks route on the backend (see note below).
+/* ---- right menu (preset list) ---- */
 const rightMenuSources = {
-  members: { url: "/api/members", label: (x) => x.name },
-  // tracks: { url: "/api/tracks", label: (x) => x.title },
+  members: { url: `${API}/api/members`, label: (x) => x.name },
 };
 
 function selectRightItem(item) {
@@ -260,20 +305,17 @@ function selectRightItem(item) {
 
 function renderRightMenu(items, label) {
   menuSelectionRight.innerHTML = "";
-
   if (!items.length) {
     menuSelectionRight.innerHTML = `<div class="menu-item menu-item--empty">empty</div>`;
     if (footerPreset) footerPreset.textContent = "-";
     return;
   }
-
   items.forEach((it, idx) => {
     const el = document.createElement("div");
     el.className = "menu-item";
     el.tabIndex = 0;
     el.textContent = label(it);
     el.dataset.id = it.id;
-
     el.addEventListener("click", () => selectRightItem(el));
     el.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
@@ -281,35 +323,28 @@ function renderRightMenu(items, label) {
         selectRightItem(el);
       }
     });
-
     menuSelectionRight.appendChild(el);
-
-    if (idx === 0) selectRightItem(el); // default selection
+    if (idx === 0) selectRightItem(el);
   });
 }
 
 async function loadRightMenu(category) {
   const source = rightMenuSources[category];
-
-  // Categories with no data source just show a placeholder.
   if (!source) {
-    menuSelectionRight.innerHTML = `<div class="menu-item menu-item--empty">&mdash; ${category} &mdash;</div>`;
+    menuSelectionRight.innerHTML = `<div class="menu-item menu-item--empty">&mdash; ${esc(category)} &mdash;</div>`;
     if (footerPreset) footerPreset.textContent = "-";
     return;
   }
-
   try {
     const res = await fetch(source.url);
     if (!res.ok) throw new Error(res.status);
-    const items = await res.json();
-    renderRightMenu(items, source.label);
+    renderRightMenu(await res.json(), source.label);
   } catch {
     menuSelectionRight.innerHTML = `<div class="menu-item menu-item--empty">failed to load</div>`;
   }
 }
 
-/* ---- Left menu (categories): select + navigate + drive right menu ---- */
-
+/* ---- left menu (categories) ---- */
 function goToTarget(el) {
   const id = el.dataset.target;
   if (!id) return;
@@ -338,8 +373,6 @@ document.querySelectorAll(".menu-selection-left .menu-item").forEach((item) => {
   });
 });
 
-// Populate the right menu once on load, matching the default-selected
-// left item, without scrolling the page.
 const defaultLeft =
   document.querySelector(".menu-selection-left .menu-item.selected") ||
   document.querySelector(".menu-selection-left .menu-item");
