@@ -1,4 +1,3 @@
-/* admin panel — reuses the site's dark base + purple menu accent */
 :root {
   --a-accent: #a897cc;
   --a-accent-dim: #8f7fb0;
@@ -16,7 +15,6 @@ body {
   padding: 32px;
 }
 
-/* generic panel — same treatment as .interact-menu */
 .adm-panel {
   border: 1px solid rgba(180, 160, 220, 0.28);
   background: var(--a-panel);
@@ -32,7 +30,6 @@ body {
   background: var(--a-accent);
 }
 
-/* ---- login ---- */
 .adm-login {
   min-height: 80vh;
   display: flex;
@@ -51,7 +48,6 @@ body {
   padding: 24px;
 }
 
-/* ---- shell ---- */
 .adm-shell {
   display: grid;
   grid-template-columns: 220px 1fr;
@@ -99,7 +95,6 @@ body {
   margin: 12px;
 }
 
-/* crop window */
 .adm-crop-overlay {
   position: fixed;
   inset: 0;
@@ -132,7 +127,6 @@ body {
   padding: 0 14px 14px;
 }
 
-/* ---- list ---- */
 .adm-list {
   display: flex;
   flex-direction: column;
@@ -184,7 +178,6 @@ body {
   border-color: rgba(229, 154, 168, 0.4);
 }
 
-/* ---- form ---- */
 .adm-form,
 .adm-fields {
   display: flex;
@@ -243,7 +236,6 @@ body {
   gap: 10px;
 }
 
-/* ---- buttons ---- */
 .adm-btn {
   padding: 10px 16px;
   font-family: var(--spleen);
