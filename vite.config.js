@@ -1,10 +1,14 @@
 import { defineConfig } from "vite";
+import { resolve } from "node:path";
 
 export default defineConfig({
-  server: {
-    proxy: {
-      "/api": "http://localhost:3000",
-      "/media": "http://localhost:3000",
+  build: {
+    rollupOptions: {
+      // two pages: the public site + the admin panel
+      input: {
+        main: resolve(__dirname, "index.html"),
+        admin: resolve(__dirname, "admin.html"),
+      },
     },
   },
 });
