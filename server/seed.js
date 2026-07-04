@@ -8,6 +8,7 @@ async function seed() {
   await pool.query("delete from services");
   await pool.query("delete from merch");
   await pool.query("delete from banners");
+  await pool.query("delete from releases");
 
   const members = ["MEMBER 01", "MEMBER 02", "MEMBER 03", "MEMBER 04"];
   let ms = 0;
@@ -45,6 +46,23 @@ async function seed() {
     await pool.query(
       "insert into merch (name, price, sort) values ($1,$2,$3)",
       ["ITEM NAME", "$--", xs++],
+    );
+  }
+
+  let rs = 0;
+  for (let i = 1; i <= 3; i++) {
+    await pool.query(
+      `insert into releases (title, img_path, soundcloud, spotify, apple, youtube, sort)
+       values ($1,$2,$3,$4,$5,$6,$7)`,
+      [
+        `RELEASE 0${i}`,
+        "/media/img/cover.jpg",
+        "https://soundcloud.com/",
+        "https://open.spotify.com/",
+        "https://music.apple.com/",
+        "https://youtube.com/",
+        rs++,
+      ],
     );
   }
 
