@@ -695,6 +695,11 @@ const rightMenuSources = {
     label: (x) => x.name,
     target: "members",
   },
+  releases: {
+    url: `${API}/api/releases`,
+    label: (x) => x.title,
+    target: "releases",
+  },
   prices: {
     url: `${API}/api/services`,
     label: (x) => x.title,
@@ -702,7 +707,6 @@ const rightMenuSources = {
   },
   merch: { url: `${API}/api/merch`, label: (x) => x.name, target: "merch" },
 };
-
 function selectRightItem(item) {
   menuSelectionRight
     .querySelectorAll(".menu-item")
