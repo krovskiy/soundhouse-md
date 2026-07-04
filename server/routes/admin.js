@@ -1,5 +1,6 @@
 import path from "node:path";
 import crypto from "node:crypto";
+import fs from "node:fs/promises";
 import { pipeline } from "node:stream/promises";
 import { createWriteStream } from "node:fs";
 import { pool } from "../db.js";
@@ -225,7 +226,6 @@ export default async function adminRoutes(app, opts) {
       await pool.query("delete from services where id=$1", [id]);
       return { ok: true };
     });
-
     // ---- merch ----
     guarded.get("/api/admin/merch", async () => {
       const { rows } = await pool.query(
@@ -235,10 +235,11 @@ export default async function adminRoutes(app, opts) {
     });
     guarded.post("/api/admin/merch", async (req) => {
       const { rows } = await pool.query(
-        "insert into merch (name, price, img_path, sort) values ($1,$2,$3,$4) returning *",
+        "insert into merch (name, price, sizes, img_path, sort) values ($1,$2,$3,$4,$5) returning *",
         [
           str(req.body?.name, 200),
           str(req.body?.price, 60),
+          str(req.body?.sizes, 100),
           str(req.body?.img_path),
           intOr(req.body?.sort, 0),
         ],
@@ -249,10 +250,11 @@ export default async function adminRoutes(app, opts) {
       const id = intOr(req.params.id);
       if (id == null) return reply.code(400).send({ error: "bad id" });
       const { rows } = await pool.query(
-        "update merch set name=$1, price=$2, img_path=$3, sort=$4 where id=$5 returning *",
+        "update merch set name=$1, price=$2, sizes=$3, img_path=$4, sort=$5 where id=$6 returning *",
         [
           str(req.body?.name, 200),
           str(req.body?.price, 60),
+          str(req.body?.sizes, 100),
           str(req.body?.img_path),
           intOr(req.body?.sort, 0),
           id,
@@ -267,7 +269,6 @@ export default async function adminRoutes(app, opts) {
       await pool.query("delete from merch where id=$1", [id]);
       return { ok: true };
     });
-
     // ---- banners ----
     guarded.get("/api/admin/banners", async () => {
       const { rows } = await pool.query(
@@ -300,6 +301,118 @@ export default async function adminRoutes(app, opts) {
       );
       if (!rows[0]) return reply.code(404).send({ error: "not found" });
       return rows[0];
+    });
+    // ---- showcase ----
+    guarded.get("/api/admin/showcase", async () => {
+      const { rows } = await pool.query(
+        "select * from showcase order by sort, id",
+      );
+      return rows;
+    });
+    guarded.post("/api/admin/showcase", async (req) => {
+      const { rows } = await pool.query(
+        "insert into showcase (img_path, caption, sort) values ($1,$2,$3) returning *",
+        [
+          str(req.body?.img_path),
+          str(req.body?.caption, 300),
+          intOr(req.body?.sort, 0),
+        ],
+      );
+      return rows[0];
+    });
+    guarded.put("/api/admin/showcase/:id", async (req, reply) => {
+      const id = intOr(req.params.id);
+      if (id == null) return reply.code(400).send({ error: "bad id" });
+      const { rows } = await pool.query(
+        "update showcase set img_path=$1, caption=$2, sort=$3 where id=$4 returning *",
+        [
+          str(req.body?.img_path),
+          str(req.body?.caption, 300),
+          intOr(req.body?.sort, 0),
+          id,
+        ],
+      );
+      if (!rows[0]) return reply.code(404).send({ error: "not found" });
+      return rows[0];
+    });
+    guarded.delete("/api/admin/showcase/:id", async (req, reply) => {
+      const id = intOr(req.params.id);
+      if (id == null) return reply.code(400).send({ error: "bad id" });
+      await pool.query("delete from showcase where id=$1", [id]);
+      return { ok: true };
+    });
+    // ---- delete uploaded media ----
+    guarded.delete("/api/admin/media", async (req, reply) => {
+      const p = str(req.body?.path);
+
+      if (!p.startsWith("/media/")) {
+        return reply.code(400).send({ error: "bad path" });
+      }
+
+      // Convert /media/img/file.png -> <mediaRoot>/img/file.png
+      const target = path.resolve(mediaRoot, "." + p.slice("/media".length));
+
+      // Prevent directory traversal
+      if (target !== mediaRoot && !target.startsWith(mediaRoot + path.sep)) {
+        return reply.code(400).send({ error: "bad path" });
+      }
+
+      try {
+        await fs.unlink(target);
+      } catch (e) {
+        if (e.code !== "ENOENT") throw e; // already deleted is fine
+      }
+
+      return { ok: true };
+    });
+    // ---- releases ----
+    guarded.get("/api/admin/releases", async () => {
+      const { rows } = await pool.query(
+        "select * from releases order by sort, id",
+      );
+      return rows;
+    });
+    guarded.post("/api/admin/releases", async (req) => {
+      const { rows } = await pool.query(
+        `insert into releases (title, img_path, soundcloud, spotify, apple, youtube, sort)
+         values ($1,$2,$3,$4,$5,$6,$7) returning *`,
+        [
+          str(req.body?.title, 200),
+          str(req.body?.img_path),
+          str(req.body?.soundcloud, 500),
+          str(req.body?.spotify, 500),
+          str(req.body?.apple, 500),
+          str(req.body?.youtube, 500),
+          intOr(req.body?.sort, 0),
+        ],
+      );
+      return rows[0];
+    });
+    guarded.put("/api/admin/releases/:id", async (req, reply) => {
+      const id = intOr(req.params.id);
+      if (id == null) return reply.code(400).send({ error: "bad id" });
+      const { rows } = await pool.query(
+        `update releases set title=$1, img_path=$2, soundcloud=$3, spotify=$4,
+         apple=$5, youtube=$6, sort=$7 where id=$8 returning *`,
+        [
+          str(req.body?.title, 200),
+          str(req.body?.img_path),
+          str(req.body?.soundcloud, 500),
+          str(req.body?.spotify, 500),
+          str(req.body?.apple, 500),
+          str(req.body?.youtube, 500),
+          intOr(req.body?.sort, 0),
+          id,
+        ],
+      );
+      if (!rows[0]) return reply.code(404).send({ error: "not found" });
+      return rows[0];
+    });
+    guarded.delete("/api/admin/releases/:id", async (req, reply) => {
+      const id = intOr(req.params.id);
+      if (id == null) return reply.code(400).send({ error: "bad id" });
+      await pool.query("delete from releases where id=$1", [id]);
+      return { ok: true };
     });
   });
 }
