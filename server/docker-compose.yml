@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: dima
+      POSTGRES_DB: soundhouse-db
+      POSTGRES_HOST_AUTH_METHOD: trust
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgres://dima@db:5432/soundhouse-db
+      ADMIN_USER: ${ADMIN_USER}
+      ADMIN_PASS: ${ADMIN_PASS}
+    depends_on:
+      - db
+    ports:
+      - "3000:3000"
+    volumes:
+      - media:/app/media
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  media:
