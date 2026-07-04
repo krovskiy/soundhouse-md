@@ -1,0 +1,8 @@
+[Unit]
+Description=Soundhouse dependency security patch
+
+[Service]
+Type=oneshot
+User=soundhouse
+WorkingDirectory=/var/www/soundhouse
+ExecStart=/bin/sh -c 'npm audit fix && cd server && npm audit fix'
