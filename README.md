@@ -1,87 +1,101 @@
-# NEXUS
+# soundhouse
 
-A music/label site with a VST-style interface, backed by an admin panel.
-Everything shown on the site — members, tracks, services, merch, banners —
-is stored in Postgres and edited through the admin panel. No hardcoded content.
+сайт лейбла с интерфейсом в стиле vst и админкой. весь контент (участники,
+треки, релизы, услуги, мерч, витрина, баннеры) хранится в postgres и
+редактируется через админку. ничего не захардкожено.
 
-## Stack
+## стек
 
-- **server/** — Node + Fastify + Postgres API
-- **frontend/** — Vite site (`/`) + admin panel (`/admin.html`)
+- server/ : node + fastify + postgres api
+- src/ + index.html / admin.html : сайт на vite (/) и админка (/admin.html)
 
-## Requirements
+## требования
 
-- Node 18+
-- A running Postgres instance
+- node 18+
+- запущенный postgres
 
-## Setup
+## установка
 
-### 1. Database
+### 1. база
 
-Create a database and a user, e.g.:
+создай базу и пользователя:
 
 ```sql
-CREATE DATABASE nexus;
-CREATE USER nexus WITH PASSWORD 'nexus';
-GRANT ALL PRIVILEGES ON DATABASE nexus TO nexus;
+CREATE DATABASE "soundhouse-db";
+CREATE USER dima WITH PASSWORD 'yourpassword';
+GRANT ALL PRIVILEGES ON DATABASE "soundhouse-db" TO dima;
 ```
 
-### 2. Server
+### 2. сервер
 
 ```bash
 cd server
-cp .env.example .env      # then edit values (see below)
+cp .env.example .env      # отредактируй значения (см. ниже)
 npm install
-npm run migrate           # creates tables + first admin from .env
-npm run seed              # optional: sample content
-npm start                 # api on http://localhost:3000
+npm run migrate           # создаёт таблицы + первого админа из .env
+npm run seed              # опционально: тестовый контент
+npm start                 # api на http://localhost:3000
 ```
 
-Edit `.env` before running migrate:
+значения в .env перед migrate:
 
-- `DATABASE_URL` — your Postgres connection string
-- `COOKIE_SECRET` — any long random string
-- `ADMIN_USER` / `ADMIN_PASS` — the first admin login (created on first migrate)
-- `FRONTEND_ORIGIN` — the Vite dev URL (`http://localhost:5173` by default)
+- DATABASE_URL : строка подключения к postgres
+- COOKIE_SECRET : любая длинная случайная строка
+- ADMIN_USER / ADMIN_PASS : первый логин админа (создаётся при первом migrate)
+- FRONTEND_ORIGIN : url vite (по умолчанию http://localhost:5173)
 
-### 3. Frontend
+### 3. фронтенд
+
+из корня проекта:
 
 ```bash
-cd frontend
-cp .env.example .env      # VITE_API_URL should point at the server
+cp .env.example .env      # VITE_API_URL должен указывать на сервер
 npm install
-npm run dev               # site on http://localhost:5173
+npm run dev               # сайт на http://localhost:5173
 ```
 
-- Public site: <http://localhost:5173/>
-- Admin panel: <http://localhost:5173/admin.html>
+- сайт: http://localhost:5173/
+- админка: http://localhost:5173/admin.html
 
-Log in with the `ADMIN_USER` / `ADMIN_PASS` you set.
+вход по ADMIN_USER / ADMIN_PASS, которые ты задал.
 
-## Admin panel
+## админка
 
-Manage all content: members (with their tracks), services, merch, and the
-scrolling banner. Image and audio uploads go through the panel and are stored
-under `server/media/`, served back at `/media/...`.
+управление контентом: участники (с треками), релизы, услуги, мерч (с
+размерами), витрина, баннер. загрузка картинок и аудио идёт через админку,
+картинки можно обрезать перед загрузкой. файлы лежат в server/media/,
+отдаются по /media/...
 
-## Production build
+## возможности
+
+- vst-интерфейс с браузером категорий и пресетов
+- участники с треками и плеером с волной
+- сетка релизов со ссылками на площадки (soundcloud, spotify, apple music,
+  youtube) при наведении
+- мерч с зумом картинки, размерами и ссылкой на заказ в телеграм
+- слайдшоу витрины
+- переключатель языка (en/ru) и темы (тёмная/светлая), всё сохраняется в куки
+
+## сборка
+
+из корня проекта:
 
 ```bash
-cd frontend
-npm run build             # outputs dist/ (index.html + admin.html)
+npm run build             # собирает dist/ (index.html + admin.html)
 ```
 
-Serve `dist/` behind any static host, set `VITE_API_URL` to your live API,
-and run the server with `NODE_ENV=production` (enables secure cookies).
+раздавай dist/ через любой статик-хостинг, укажи VITE_API_URL на боевой api,
+запускай сервер с NODE_ENV=production (включает secure-куки).
 
-## Security notes
+## безопасность
 
-- Passwords hashed with bcrypt; login is rate-limited.
-- Sessions are opaque server-side tokens in an httpOnly, sameSite cookie —
-  revocable from the DB, wiped on logout.
-- All admin write routes sit behind an auth guard.
-- CORS is locked to `FRONTEND_ORIGIN` with credentials.
-- All queries are parameterized; inputs are trimmed and length-capped.
-- Uploads are extension-whitelisted, size-capped, and randomly renamed.
-- Security headers via Helmet; global rate limit on the whole API.
-- User text is escaped before rendering on the site and in the panel.
+- пароли хешируются bcrypt, логин с лимитом запросов
+- сессии это серверные токены в httponly sameSite куке, отзываются из базы,
+  чистятся при выходе
+- все админские роуты за проверкой авторизации
+- cors ограничен FRONTEND_ORIGIN с credentials
+- все запросы параметризованы, ввод обрезается и ограничивается по длине
+- загрузки по白 списку расширений, с лимитом размера и случайным именем,
+  защита от path traversal при удалении
+- заголовки безопасности через helmet, общий лимит запросов на api
+- пользовательский текст экранируется перед выводом
