@@ -1,0 +1,294 @@
+/* admin panel — reuses the site's dark base + purple menu accent */
+:root {
+  --a-accent: #a897cc;
+  --a-accent-dim: #8f7fb0;
+  --a-sel: #6d5c93;
+  --a-panel: radial-gradient(130% 130% at 50% 0%, #2a2142 0%, #171022 78%);
+  --a-line: rgba(180, 160, 220, 0.22);
+}
+
+body {
+  min-height: 100vh;
+}
+
+#app {
+  min-height: 100vh;
+  padding: 32px;
+}
+
+/* generic panel — same treatment as .interact-menu */
+.adm-panel {
+  border: 1px solid rgba(180, 160, 220, 0.28);
+  background: var(--a-panel);
+  color: #c3b2e0;
+}
+
+.adm-panel-head {
+  padding: 10px 14px;
+  font-size: 0.72rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #1e1e1e;
+  background: var(--a-accent);
+}
+
+/* ---- login ---- */
+.adm-login {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.adm-login-box {
+  width: 340px;
+}
+
+.adm-login-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+}
+
+/* ---- shell ---- */
+.adm-shell {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.adm-side {
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+}
+
+.adm-nav {
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 4px;
+}
+
+.adm-navbtn {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #c3b2e0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.adm-navbtn:hover {
+  background: rgba(180, 160, 220, 0.14);
+}
+
+.adm-navbtn.on {
+  color: #f2ecff;
+  background: var(--a-sel);
+}
+
+.adm-logout {
+  margin: 12px;
+}
+
+/* crop window */
+.adm-crop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 10, 25, 0.7);
+}
+
+.adm-crop-box {
+  width: min(90vw, 520px);
+  border: 1px solid rgba(180, 160, 220, 0.28);
+  background: var(--a-panel);
+}
+
+.adm-crop-stage {
+  padding: 14px;
+}
+
+.adm-crop-img {
+  display: block;
+  max-width: 100%;
+  max-height: 60vh;
+}
+
+.adm-crop-bar {
+  display: flex;
+  gap: 10px;
+  padding: 0 14px 14px;
+}
+
+/* ---- list ---- */
+.adm-list {
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  gap: 8px;
+}
+
+.adm-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--a-line);
+  border-radius: 4px;
+}
+
+.adm-item-label {
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.adm-item-actions {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.adm-mini {
+  padding: 5px 10px;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #c3b2e0;
+  background: transparent;
+  border: 1px solid var(--a-line);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.adm-mini:hover {
+  background: rgba(180, 160, 220, 0.16);
+}
+
+.adm-danger {
+  color: #e59aa8;
+  border-color: rgba(229, 154, 168, 0.4);
+}
+
+/* ---- form ---- */
+.adm-form,
+.adm-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+}
+
+.adm-form .adm-fields {
+  padding: 0;
+}
+
+.adm-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.adm-field label {
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--a-accent-dim);
+}
+
+.adm-input,
+.adm-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  font-family: var(--spleen);
+  font-size: 0.8rem;
+  color: #f2ecff;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--a-line);
+  border-radius: 4px;
+}
+
+.adm-field textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.adm-input:focus,
+.adm-field textarea:focus {
+  outline: none;
+  border-color: var(--a-accent);
+}
+
+.adm-file {
+  font-size: 0.7rem;
+  color: var(--a-accent-dim);
+}
+
+.adm-formbar {
+  display: flex;
+  gap: 10px;
+}
+
+/* ---- buttons ---- */
+.adm-btn {
+  padding: 10px 16px;
+  font-family: var(--spleen);
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f2ecff;
+  background: var(--a-sel);
+  border: 1px solid var(--a-line);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.adm-btn:hover {
+  background: #7d6aa8;
+}
+
+.adm-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.adm-ghost {
+  background: transparent;
+  color: #c3b2e0;
+}
+
+.adm-add {
+  margin-top: 4px;
+}
+
+.adm-back {
+  align-self: flex-start;
+}
+
+.adm-error {
+  padding: 8px 12px;
+  font-size: 0.72rem;
+  color: #e59aa8;
+  border: 1px solid rgba(229, 154, 168, 0.4);
+  border-radius: 4px;
+}
+
+@media (max-width: 700px) {
+  .adm-shell {
+    grid-template-columns: 1fr;
+  }
+}
