@@ -1,0 +1,6 @@
+node_modules/
+.env
+media/audio/*
+media/img/*
+!media/audio/.gitkeep
+!media/img/.gitkeep
