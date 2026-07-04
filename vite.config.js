@@ -4,7 +4,6 @@ import { resolve } from "node:path";
 export default defineConfig({
   build: {
     rollupOptions: {
-      // two pages: the public site + the admin panel
       input: {
         main: resolve(__dirname, "index.html"),
         admin: resolve(__dirname, "admin.html"),
