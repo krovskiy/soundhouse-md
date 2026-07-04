@@ -3,9 +3,8 @@ import bcrypt from "bcryptjs";
 import { pool } from "./db.js";
 
 const COOKIE = "sid";
-const TTL_MS = 1000 * 60 * 60 * 8; // 8h sessions
+const TTL_MS = 1000 * 60 * 60 * 8;
 
-// random opaque token, not a jwt so it can be revoked from the db
 function newToken() {
   return crypto.randomBytes(32).toString("hex");
 }
@@ -15,7 +14,7 @@ export async function login(username, password) {
     "select id, pass_hash from admins where username = $1",
     [username],
   );
-  // compare against a dummy hash when user is missing to keep timing flat
+
   const hash = rows[0]?.pass_hash ?? "$2b$12$" + "x".repeat(53);
   const ok = await bcrypt.compare(password, hash);
   if (!rows[0] || !ok) return null;
@@ -32,7 +31,6 @@ export async function logout(token) {
   if (token) await pool.query("delete from sessions where token = $1", [token]);
 }
 
-// reads cookie, checks db, drops expired sessions
 async function sessionFromReq(req) {
   const token = req.cookies?.[COOKIE];
   if (!token) return null;
@@ -49,7 +47,6 @@ async function sessionFromReq(req) {
   return { adminId: s.admin_id, token };
 }
 
-// fastify preHandler for every /api/admin route
 export async function requireAuth(req, reply) {
   const s = await sessionFromReq(req);
   if (!s) return reply.code(401).send({ error: "unauthorized" });
@@ -58,8 +55,8 @@ export async function requireAuth(req, reply) {
 
 export function setSessionCookie(reply, token) {
   reply.setCookie(COOKIE, token, {
-    httpOnly: true, // js can't read it
-    sameSite: "lax", // blocks cross-site posts
+    httpOnly: true,
+    sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: TTL_MS / 1000,

@@ -1,6 +1,4 @@
 import { pool } from "../db.js";
-
-// read-only endpoints the frontend site consumes
 export default async function publicRoutes(app) {
   app.get("/api/members", async () => {
     const { rows } = await pool.query(

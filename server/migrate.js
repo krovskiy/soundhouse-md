@@ -2,7 +2,6 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { pool } from "./db.js";
 
-// creates every table the site needs. safe to run repeatedly.
 async function migrate() {
   await pool.query(`
     create table if not exists admins (
@@ -79,7 +78,6 @@ async function migrate() {
     alter table merch add column if not exists sizes text not null default '';
   `);
 
-  // create first admin from env if none exists yet
   const { rows } = await pool.query("select count(*)::int as n from admins");
   if (rows[0].n === 0) {
     const user = process.env.ADMIN_USER;

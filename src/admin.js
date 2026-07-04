@@ -5,7 +5,6 @@ import Cropper from "cropperjs";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
-// always send the session cookie
 function api(pathname, opts = {}) {
   return fetch(API + pathname, { credentials: "include", ...opts });
 }
@@ -31,7 +30,6 @@ function esc(s) {
   );
 }
 
-// opens a crop window for an image file, resolves to a cropped blob (or null if cancelled)
 function cropImage(file, aspect) {
   return new Promise((resolve) => {
     const url = URL.createObjectURL(file);
@@ -50,7 +48,6 @@ function cropImage(file, aspect) {
     `;
     document.body.appendChild(overlay);
 
-    // v2 wants a real <img> as the first arg; the container goes in options
     const image = new Image();
     image.src = url;
 
@@ -91,12 +88,10 @@ function cropImage(file, aspect) {
         const selection = canvasEl.querySelector("cropper-selection");
         const cropperImage = canvasEl.querySelector("cropper-image");
 
-        // the image's true pixel width vs how wide it's shown on screen
         const natural = cropperImage.$image.naturalWidth;
         const shown = cropperImage.getBoundingClientRect().width;
         const scale = natural && shown ? natural / shown : 1;
 
-        // render the crop at full source resolution instead of preview size
         const canvas = await selection.$toCanvas({
           width: Math.round(selection.width * scale),
           height: Math.round(selection.height * scale),
@@ -112,7 +107,6 @@ function cropImage(file, aspect) {
 }
 const app = document.querySelector("#app");
 
-// ---- login gate ----
 function renderLogin(msg = "") {
   app.innerHTML = /*html*/ `
     <div class="adm-login">
@@ -148,7 +142,6 @@ function renderLogin(msg = "") {
     );
 }
 
-// ---- shared: upload a file, return its /media path ----
 async function upload(file) {
   const fd = new FormData();
   fd.append("file", file);
@@ -158,7 +151,7 @@ async function upload(file) {
 }
 
 async function deleteMedia(path) {
-  if (!path || !path.startsWith("/media/")) return; // only ever touch our uploads
+  if (!path || !path.startsWith("/media/")) return;
   try {
     await api("/api/admin/media", {
       method: "DELETE",
@@ -170,8 +163,6 @@ async function deleteMedia(path) {
   }
 }
 
-// ---- generic section renderer ----
-// fields: [{ key, label, type }]  type: text | textarea | number | image | audio
 function section(cfg) {
   return { ...cfg };
 }
@@ -284,7 +275,6 @@ function renderDash() {
   renderSection(SECTIONS[activeKey]);
 }
 
-// builds inputs for one record and returns a collector fn
 function fieldInputs(cfg, data = {}) {
   const wrap = document.createElement("div");
   wrap.className = "adm-fields";
@@ -307,11 +297,10 @@ function fieldInputs(cfg, data = {}) {
       el.placeholder = "/media/...";
       el.className = "adm-input";
 
-      // lifecycle state for this media field
       const media = {
         getValue: () => el.value,
-        persisted: data[f.key] ?? "", // saved in DB — only drop on save
-        session: "", // last upload this session — safe to drop now
+        persisted: data[f.key] ?? "",
+        session: "",
       };
       mediaFields.push(media);
 
@@ -334,7 +323,7 @@ function fieldInputs(cfg, data = {}) {
             toUpload = new File([cropped], "crop.jpg", { type: "image/jpeg" });
           }
           const newPath = await upload(toUpload);
-          // an earlier upload from this same session becomes garbage — remove it
+
           if (media.session && media.session !== newPath)
             deleteMedia(media.session);
           media.session = newPath;
@@ -352,11 +341,10 @@ function fieldInputs(cfg, data = {}) {
       wrap.appendChild(g);
       continue;
     } else if (f.type === "toggle") {
-      // real checkbox
       el = document.createElement("input");
       el.type = "checkbox";
       el.className = "adm-toggle";
-      el.checked = data[f.key] ?? true; // on by default
+      el.checked = data[f.key] ?? true;
       getters[f.key] = () => el.checked;
       g.appendChild(el);
       wrap.appendChild(g);
@@ -378,20 +366,15 @@ function fieldInputs(cfg, data = {}) {
     collect: () =>
       Object.fromEntries(Object.entries(getters).map(([k, f]) => [k, f()])),
 
-    // call AFTER a save succeeds: whatever the DB used to point at (persisted)
-    // is now unreferenced if the field changed, so delete it from disk.
     commit: () => {
       for (const m of mediaFields) {
         const now = m.getValue();
         if (m.persisted && m.persisted !== now) deleteMedia(m.persisted);
-        m.persisted = now; // new saved baseline
-        m.session = ""; // it's persisted now, no longer a loose upload
+        m.persisted = now;
+        m.session = "";
       }
     },
 
-    // call when leaving the form WITHOUT saving: any file uploaded this session
-    // was never written to the DB, so it's junk — drop it. The persisted file
-    // is left alone because the DB still points at it.
     discard: () => {
       for (const m of mediaFields) {
         if (m.session && m.session !== m.persisted) deleteMedia(m.session);
@@ -416,7 +399,6 @@ async function renderSection(cfg) {
 
   list.innerHTML = "";
 
-  // existing rows
   rows.forEach((r) => {
     const item = document.createElement("div");
     item.className = "adm-item";
@@ -433,7 +415,7 @@ async function renderSection(cfg) {
       .addEventListener("click", async () => {
         if (!confirm("delete this?")) return;
         await api(`${cfg.base}/${r.id}`, { method: "DELETE" });
-        // free the files this record was holding
+
         for (const f of cfg.fields)
           if (f.type === "image" || f.type === "audio") deleteMedia(r[f.key]);
         renderSection(cfg);
@@ -470,7 +452,7 @@ function openForm(cfg, data) {
   form.appendChild(bar);
 
   bar.querySelector("#cancel").addEventListener("click", () => {
-    discard(); // any files uploaded but not saved are junk
+    discard();
     renderSection(cfg);
   });
   bar.querySelector("#save").addEventListener("click", async () => {
@@ -478,7 +460,7 @@ function openForm(cfg, data) {
       const body = collect();
       if (editing) await jsonPost(`${cfg.base}/${data.id}`, body, "PUT");
       else await jsonPost(cfg.base, body, "POST");
-      commit(); // save landed — drop the old files this record replaced
+      commit();
       renderSection(cfg);
     } catch (e) {
       alert("save failed: " + e.message);
@@ -486,7 +468,6 @@ function openForm(cfg, data) {
   });
 }
 
-// ---- tracks sub-view for a member ----
 async function renderTracks(member) {
   const main = document.querySelector("#main");
   main.innerHTML = `<div class="adm-panel"><div class="adm-panel-head">tracks // ${esc(member.name)}</div><div class="adm-list" id="list">loading…</div></div>`;
@@ -531,8 +512,8 @@ async function renderTracks(member) {
       .addEventListener("click", async () => {
         if (!confirm("delete this track?")) return;
         await api(`/api/admin/tracks/${t.id}`, { method: "DELETE" });
-        deleteMedia(t.file_path); // audio
-        deleteMedia(t.cover_path); // cover art
+        deleteMedia(t.file_path);
+        deleteMedia(t.cover_path);
         renderTracks(member);
       });
     item
@@ -566,7 +547,7 @@ function openTrackForm(member, data, trackCfg) {
   form.appendChild(bar);
 
   bar.querySelector("#cancel").addEventListener("click", () => {
-    discard(); // any files uploaded but not saved are junk
+    discard();
     renderTracks(member);
   });
   bar.querySelector("#save").addEventListener("click", async () => {
@@ -576,7 +557,7 @@ function openTrackForm(member, data, trackCfg) {
       if (editing) await jsonPost(`/api/admin/tracks/${data.id}`, body, "PUT");
       else
         await jsonPost(`/api/admin/members/${member.id}/tracks`, body, "POST");
-      commit(); // save landed — drop the old audio/cover this track replaced
+      commit();
       renderTracks(member);
     } catch (e) {
       alert("save failed: " + e.message);
@@ -584,7 +565,6 @@ function openTrackForm(member, data, trackCfg) {
   });
 }
 
-// ---- boot: are we already logged in? ----
 (async () => {
   const res = await api("/api/admin/me");
   if (res.ok) renderDash();

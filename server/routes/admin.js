@@ -13,11 +13,9 @@ import {
   COOKIE,
 } from "../auth.js";
 
-// whitelist upload types + where each lands under /media
 const AUDIO_EXT = new Set([".mp3", ".wav", ".ogg", ".m4a", ".flac"]);
 const IMG_EXT = new Set([".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"]);
 
-// trims + caps a string field so nothing wild hits the db
 function str(v, max = 500) {
   if (typeof v !== "string") return "";
   return v.trim().slice(0, max);
@@ -32,7 +30,6 @@ function bool(v) {
   return v === true || v === "true" || v === 1 || v === "1";
 }
 
-// saves one multipart file, returns its public /media path
 async function saveUpload(part, mediaRoot) {
   const ext = path.extname(part.filename || "").toLowerCase();
   const isAudio = AUDIO_EXT.has(ext);
@@ -40,7 +37,7 @@ async function saveUpload(part, mediaRoot) {
   if (!isAudio && !isImg) throw new Error("unsupported file type");
 
   const sub = isAudio ? "audio" : "img";
-  // random name so users can't overwrite or guess paths
+
   const name = crypto.randomBytes(16).toString("hex") + ext;
   const dest = path.join(mediaRoot, sub, name);
   await pipeline(part.file, createWriteStream(dest));
@@ -51,8 +48,6 @@ async function saveUpload(part, mediaRoot) {
 export default async function adminRoutes(app, opts) {
   const mediaRoot = opts.mediaRoot;
 
-  // ---- auth ----
-  // tighter limit here to slow password guessing
   app.post(
     "/api/admin/login",
     {
@@ -75,13 +70,11 @@ export default async function adminRoutes(app, opts) {
     return { ok: true };
   });
 
-  // everything below needs a valid session
   app.register(async (guarded) => {
     guarded.addHook("preHandler", requireAuth);
 
     guarded.get("/api/admin/me", async () => ({ ok: true }));
 
-    // ---- file upload (shared) ----
     guarded.post("/api/admin/upload", async (req, reply) => {
       const part = await req.file();
       if (!part) return reply.code(400).send({ error: "no file" });
@@ -93,7 +86,6 @@ export default async function adminRoutes(app, opts) {
       }
     });
 
-    // ---- members ----
     guarded.get("/api/admin/members", async () => {
       const { rows } = await pool.query(
         "select id, name, img_path, sort from members order by sort, id",
@@ -133,7 +125,6 @@ export default async function adminRoutes(app, opts) {
       return { ok: true };
     });
 
-    // ---- tracks (nested under a member) ----
     guarded.get("/api/admin/members/:id/tracks", async (req, reply) => {
       const id = intOr(req.params.id);
       if (id == null) return reply.code(400).send({ error: "bad id" });
@@ -185,7 +176,6 @@ export default async function adminRoutes(app, opts) {
       return { ok: true };
     });
 
-    // ---- services ----
     guarded.get("/api/admin/services", async () => {
       const { rows } = await pool.query(
         "select * from services order by sort, id",
@@ -226,7 +216,7 @@ export default async function adminRoutes(app, opts) {
       await pool.query("delete from services where id=$1", [id]);
       return { ok: true };
     });
-    // ---- merch ----
+
     guarded.get("/api/admin/merch", async () => {
       const { rows } = await pool.query(
         "select * from merch order by sort, id",
@@ -269,7 +259,7 @@ export default async function adminRoutes(app, opts) {
       await pool.query("delete from merch where id=$1", [id]);
       return { ok: true };
     });
-    // ---- banners ----
+
     guarded.get("/api/admin/banners", async () => {
       const { rows } = await pool.query(
         "select * from banners order by sort, id",
@@ -302,7 +292,7 @@ export default async function adminRoutes(app, opts) {
       if (!rows[0]) return reply.code(404).send({ error: "not found" });
       return rows[0];
     });
-    // ---- showcase ----
+
     guarded.get("/api/admin/showcase", async () => {
       const { rows } = await pool.query(
         "select * from showcase order by sort, id",
@@ -341,7 +331,7 @@ export default async function adminRoutes(app, opts) {
       await pool.query("delete from showcase where id=$1", [id]);
       return { ok: true };
     });
-    // ---- delete uploaded media ----
+
     guarded.delete("/api/admin/media", async (req, reply) => {
       const p = str(req.body?.path);
 
@@ -349,10 +339,8 @@ export default async function adminRoutes(app, opts) {
         return reply.code(400).send({ error: "bad path" });
       }
 
-      // Convert /media/img/file.png -> <mediaRoot>/img/file.png
       const target = path.resolve(mediaRoot, "." + p.slice("/media".length));
 
-      // Prevent directory traversal
       if (target !== mediaRoot && !target.startsWith(mediaRoot + path.sep)) {
         return reply.code(400).send({ error: "bad path" });
       }
@@ -360,12 +348,12 @@ export default async function adminRoutes(app, opts) {
       try {
         await fs.unlink(target);
       } catch (e) {
-        if (e.code !== "ENOENT") throw e; // already deleted is fine
+        if (e.code !== "ENOENT") throw e;
       }
 
       return { ok: true };
     });
-    // ---- releases ----
+
     guarded.get("/api/admin/releases", async () => {
       const { rows } = await pool.query(
         "select * from releases order by sort, id",

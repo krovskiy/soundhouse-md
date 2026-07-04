@@ -6,12 +6,11 @@ import WaveSurfer from "wavesurfer.js";
 import { initPrefs, applyLang, applyTheme, getCookie } from "./theme.js";
 import { t } from "./i18n.js";
 
-initPrefs(); // restore saved prefs before first render
+initPrefs();
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
 const TELEGRAM_USER = import.meta.env.TELEGRAM_USER || "kafeshka";
 
-// escape user text before it goes into innerHTML
 function esc(s) {
   return String(s ?? "").replace(
     /[&<>"']/g,
@@ -22,7 +21,6 @@ function esc(s) {
   );
 }
 
-// prefix relative /media paths with the api origin
 function media(p) {
   if (!p) return "";
   return p.startsWith("/media") ? API + p : p;
@@ -140,7 +138,6 @@ document.querySelector("#app").innerHTML = /*html*/ `
   </main>
 `;
 
-// ---- language toggle ----
 const langBtn = document.querySelector("#lang-toggle");
 function syncLangBtn() {
   const lang = getCookie("lang") || "en";
@@ -151,21 +148,18 @@ langBtn.addEventListener("click", () => {
   const next = (getCookie("lang") || "en") === "en" ? "ru" : "en";
   applyLang(next);
   syncLangBtn();
-  location.reload(); // simplest: reload so all sections re-render translated
+  location.reload();
 });
 
-// ---- theme toggle ----
 document.querySelector("#theme-toggle").addEventListener("click", () => {
   const next = (getCookie("theme") || "dark") === "dark" ? "light" : "dark";
   applyTheme(next);
 });
 
-// ---- fake VST meter jitter ----
 (function animateMeters() {
   const rows = document.querySelectorAll(".footer-meta-row");
   if (!rows.length) return;
 
-  // [current value, suffix, max] per row — tweak to taste
   const meters = [
     { val: 20, suffix: "%", max: 100 },
     { val: 0, suffix: "vc", max: 16 },
@@ -178,14 +172,12 @@ document.querySelector("#theme-toggle").addEventListener("click", () => {
     const barEl = row.querySelector(".footer-meta-slot > span");
 
     const tick = () => {
-      // drift by a small random step, clamp to [0, max]
       m.val += (Math.random() - 0.5) * m.max * 0.25;
       m.val = Math.max(0, Math.min(m.max, m.val));
       const shown = Math.round(m.val);
       valEl.textContent = `${shown}${m.suffix}`;
       barEl.style.width = `${(m.val / m.max) * 100}%`;
 
-      // schedule next tick at a random interval so they feel independent
       setTimeout(tick, 400 + Math.random() * 900);
     };
     tick();
@@ -219,12 +211,10 @@ setTimeout(() => {
   intro.addEventListener("transitionend", () => intro.remove(), { once: true });
 }, 2200);
 
-// ---- background shards ----
 function spawnShards(count = 14) {
   const layer = document.createElement("div");
   layer.className = "shard-layer";
 
-  // a few angular "shard" silhouettes; picked at random per shard
   const shapes = [
     "polygon(0 0, 100% 20%, 80% 100%, 20% 80%)",
     "polygon(50% 0, 100% 60%, 60% 100%, 0 50%)",
@@ -237,14 +227,14 @@ function spawnShards(count = 14) {
   for (let i = 0; i < count; i++) {
     const s = document.createElement("div");
     s.className = "shard";
-    const size = 20 + Math.random() * 80; // 20–100px
+    const size = 20 + Math.random() * 80;
     s.style.width = `${size}px`;
     s.style.height = `${size}px`;
     s.style.left = `${Math.random() * 100}%`;
     s.style.top = `${Math.random() * 100}%`;
     s.style.clipPath = shapes[(Math.random() * shapes.length) | 0];
     s.style.background = tints[(Math.random() * tints.length) | 0];
-    s.style.opacity = (0.14 + Math.random() * 0.1).toFixed(2); // 0.04–0.14
+    s.style.opacity = (0.14 + Math.random() * 0.1).toFixed(2);
     s.style.transform = `rotate(${Math.random() * 360}deg)`;
     s.style.animationDuration = `${12 + Math.random() * 18}s`;
     s.style.animationDelay = `${-Math.random() * 20}s`;
@@ -287,7 +277,7 @@ function renderTracks(tracks) {
   tracks.forEach((t) => {
     const row = document.createElement("div");
     row.className = "track-item";
-    row.innerHTML = /*html*/ `
+    row.innerHTML = `
       <div class="track-cover"></div>
       <span class="track-num">${String(t.position).padStart(2, "0")}</span>
       <span class="track-title">${esc(t.title)}</span>
@@ -348,12 +338,11 @@ function skipTo(fromWs, dir) {
   const i = instances.indexOf(fromWs);
   if (i === -1) return;
   const next = instances[i + dir];
-  if (!next) return; // at the ends of the list, do nothing
+  if (!next) return;
   fromWs.pause();
-  fromWs.setTime(0); // reset the one we're leaving
+  fromWs.setTime(0);
   next.setTime(0);
-  next.play(); // triggers your existing "play" handler,
-  // which pauses `current` and updates it
+  next.play();
 }
 
 async function loadMemberTracks(id) {
@@ -371,7 +360,7 @@ async function loadMembers() {
     const card = document.createElement("div");
     card.className = "member-card";
     card.dataset.memberId = m.id;
-    card.innerHTML = /*html*/ `
+    card.innerHTML = `
       <div class="member-img-placeholder"></div>
       <p class="member-name">${esc(m.name)}</p>
     `;
@@ -402,14 +391,13 @@ async function loadBanners() {
   const banners = await res.json();
   bannerBody.innerHTML = "";
 
-  // nothing active -> hide the bar entirely
   if (banners.length == 1) {
     document.querySelector(".banner-bar").style.display = "none";
     return;
   }
 
   const text = banners.map((b) => b.text).join("   //   ");
-  // repeat so the scrolling strip stays filled
+
   bannerBody.innerHTML = `
     <img class="banner-img" src="">
     <p class="banner-text">${esc(text)}</p>
@@ -515,7 +503,7 @@ function openMerchModal(m) {
     </div>
   `;
   document.body.appendChild(overlay);
-  document.body.style.overflow = "hidden"; // lock page scroll while open
+  document.body.style.overflow = "hidden";
 
   const close = () => {
     document.body.style.overflow = "";
@@ -527,7 +515,6 @@ function openMerchModal(m) {
   overlay.addEventListener("click", (e) => e.target === overlay && close());
   overlay.querySelector(".merch-modal-close").addEventListener("click", close);
 
-  // ---- zoom + pan ----
   const stage = overlay.querySelector(".merch-modal-stage");
   const img = overlay.querySelector(".merch-modal-img");
   let scale = 1,
@@ -637,7 +624,6 @@ async function loadShowcase() {
   const res = await fetch(`${API}/api/showcase`);
   slides = await res.json();
 
-  // nothing to show -> hide the whole section
   if (!slides.length) {
     document.querySelector(".showcase-container").style.display = "none";
     return;
@@ -678,7 +664,6 @@ loadMerch();
 loadShowcase();
 loadReleases();
 
-// scroll the page to a section by id
 function scrollToSection(id) {
   if (!id) return;
   const section = document.getElementById(id);
@@ -687,8 +672,6 @@ function scrollToSection(id) {
   section.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-/* ---- right menu (preset list) ---- */
-// each category: where to fetch, how to label, and which section to scroll to
 const rightMenuSources = {
   members: {
     url: `${API}/api/members`,
@@ -729,7 +712,6 @@ function renderRightMenu(items, label, target) {
     el.textContent = label(it);
     el.dataset.id = it.id;
 
-    // select + scroll to the section this category points at
     const activate = () => {
       selectRightItem(el);
       scrollToSection(target);
@@ -743,7 +725,7 @@ function renderRightMenu(items, label, target) {
       }
     });
     menuSelectionRight.appendChild(el);
-    if (idx === 0) selectRightItem(el); // default select on load, no scroll
+    if (idx === 0) selectRightItem(el);
   });
 }
 
@@ -763,7 +745,6 @@ async function loadRightMenu(category) {
   }
 }
 
-/* ---- left menu (categories): only loads the right menu, no scrolling ---- */
 function activateLeftItem(item) {
   document
     .querySelectorAll(".menu-selection-left .menu-item")
@@ -782,7 +763,6 @@ document.querySelectorAll(".menu-selection-left .menu-item").forEach((item) => {
   });
 });
 
-// populate the right menu once on load for the default-selected left item
 const defaultLeft =
   document.querySelector(".menu-selection-left .menu-item.selected") ||
   document.querySelector(".menu-selection-left .menu-item");

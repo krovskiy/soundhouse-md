@@ -1,7 +1,6 @@
 import "dotenv/config";
 import { pool } from "./db.js";
 
-// optional demo content. run after migrate if you want sample rows.
 async function seed() {
   await pool.query("delete from tracks");
   await pool.query("delete from members");

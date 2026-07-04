@@ -1,5 +1,3 @@
-// reads/writes theme + accent + lang from a cookie, applies to <html>
-
 function getCookie(name) {
   return document.cookie
     .split("; ")
@@ -8,7 +6,6 @@ function getCookie(name) {
 }
 
 function setCookie(name, val) {
-  // 1 year, site-wide
   document.cookie = `${name}=${val}; path=/; max-age=31536000`;
 }
 
@@ -27,7 +24,6 @@ export function applyLang(lang) {
   setCookie("lang", lang);
 }
 
-// call once on load to restore saved prefs
 export function initPrefs() {
   applyTheme(getCookie("theme") || "dark");
   applyAccent(getCookie("accent") || "purple");

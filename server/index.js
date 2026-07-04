@@ -17,12 +17,11 @@ const mediaRoot = path.join(__dirname, "..", "media");
 
 const app = Fastify({ logger: true, bodyLimit: 1_000_000 });
 
-// security headers
 await app.register(helmet, {
   contentSecurityPolicy: false,
   crossOriginResourcePolicy: { policy: "cross-origin" },
 });
-// only allow the known frontend origin to talk to the api with credentials
+
 const origin = process.env.FRONTEND_ORIGIN || "http://localhost:5173";
 await app.register(cors, {
   origin,
@@ -30,20 +29,16 @@ await app.register(cors, {
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 });
 
-// signed cookies for sessions
 await app.register(cookie, {
   secret: process.env.COOKIE_SECRET || "change-me",
 });
 
-// global throttle to blunt brute-force + scraping
 await app.register(rateLimit, { max: 300, timeWindow: "1 minute" });
 
-// file uploads capped at 20mb
 await app.register(multipart, {
   limits: { fileSize: 20 * 1024 * 1024, files: 1 },
 });
 
-// serve uploaded media
 await app.register(fastifyStatic, {
   root: mediaRoot,
   prefix: "/media/",

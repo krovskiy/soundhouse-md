@@ -11,7 +11,7 @@ export const I18N = {
     tgServices: "WRITE ON TELEGRAM",
     tgMerch: "write on telegram",
     sizesLabel: "available in",
-    // vst left-menu labels
+
     m_members: "members",
     m_services: "services",
     m_merch: "merch",
