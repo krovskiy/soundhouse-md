@@ -1,55 +1,56 @@
+import "dotenv/config";
 import { pool } from "./db.js";
 
+// optional demo content. run after migrate if you want sample rows.
 async function seed() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS members (
-      id SERIAL PRIMARY KEY,
-      name TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS tracks (
-      id SERIAL PRIMARY KEY,
-      member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
-      position INTEGER NOT NULL,
-      title TEXT NOT NULL,
-      file_path TEXT NOT NULL,
-      cover_path TEXT
-    );
-  `);
-
-  await pool.query("DELETE FROM tracks");
-  await pool.query("DELETE FROM members");
+  await pool.query("delete from tracks");
+  await pool.query("delete from members");
+  await pool.query("delete from services");
+  await pool.query("delete from merch");
+  await pool.query("delete from banners");
 
   const members = ["MEMBER 01", "MEMBER 02", "MEMBER 03", "MEMBER 04"];
+  let ms = 0;
   for (const name of members) {
     const { rows } = await pool.query(
-      "INSERT INTO members (name) VALUES ($1) RETURNING id",
-      [name],
+      "insert into members (name, sort) values ($1, $2) returning id",
+      [name, ms++],
     );
-    const memberId = rows[0].id;
-
-    const tracks = [
-      {
-        title: "TRACK ONE",
-        file: "/media/audio/track01.mp3",
-        cover: "/media/audio/track01.jpg",
-      },
-      {
-        title: "TRACK TWO",
-        file: "/media/audio/track01.mp3",
-        cover: "/media/audio/track01.jpg",
-      },
-    ];
-
+    const id = rows[0].id;
     let pos = 1;
-    for (const t of tracks) {
+    for (const title of ["TRACK ONE", "TRACK TWO"]) {
       await pool.query(
-        `INSERT INTO tracks (member_id, position, title, file_path, cover_path)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [memberId, pos++, t.title, t.file, t.cover],
+        `insert into tracks (member_id, position, title, file_path, cover_path)
+         values ($1, $2, $3, $4, $5)`,
+        [id, pos++, title, "/media/audio/track01.mp3", "/media/img/cover.jpg"],
       );
     }
   }
+
+  const services = [
+    ["MIXING", "Placeholder description for mixing services.", "$--"],
+    ["MASTERING", "Placeholder description for mastering services.", "$--"],
+    ["PRODUCTION", "Placeholder description for production services.", "$--"],
+  ];
+  let ss = 0;
+  for (const [t, d, p] of services) {
+    await pool.query(
+      "insert into services (title, description, price, sort) values ($1,$2,$3,$4)",
+      [t, d, p, ss++],
+    );
+  }
+
+  let xs = 0;
+  for (let i = 0; i < 4; i++) {
+    await pool.query(
+      "insert into merch (name, price, sort) values ($1,$2,$3)",
+      ["ITEM NAME", "$--", xs++],
+    );
+  }
+
+  await pool.query("insert into banners (text, sort) values ($1, 0)", [
+    "NEW MEMBER: TEST",
+  ]);
 
   console.log("seeded");
   await pool.end();
