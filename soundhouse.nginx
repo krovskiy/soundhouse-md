@@ -4,7 +4,7 @@ limit_req_zone $binary_remote_addr zone=login:10m rate=5r/m;
 server {
     listen 80;
     listen [::]:80;
-    server_name _;
+    server_name _; # change to domain
 
     root /var/www/soundhouse/dist;
     index index.html;
@@ -25,6 +25,11 @@ server {
     gzip on;
     gzip_types text/css application/javascript application/json image/svg+xml;
     gzip_min_length 1024;
+
+    location ^~ /.well-known/acme-challenge/ {
+    allow all;
+    root /var/www/soundhouse/dist;   # or wherever; certbot can use its own webroot too
+    }
 
     location ~ /\. {
         deny all;

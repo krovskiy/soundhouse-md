@@ -9,7 +9,7 @@ import { t } from "./i18n.js";
 initPrefs();
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
-const TELEGRAM_USER = import.meta.env.TELEGRAM_USER || "kafeshka";
+const TELEGRAM_USER = import.meta.env.VITE_TELEGRAM_USER || "kafeshka";
 
 function esc(s) {
   return String(s ?? "").replace(

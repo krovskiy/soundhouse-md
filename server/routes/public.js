@@ -51,4 +51,15 @@ export default async function publicRoutes(app) {
     );
     return rows;
   });
+
+  app.get("/health", async () => ({ status: "ok" }));
+
+  app.get("/ready", async (req, reply) => {
+    try {
+      await pool.query("select 1");
+      return { status: "ready" };
+    } catch {
+      return reply.code(503).send({ status: "unavailable" });
+    }
+  });
 }

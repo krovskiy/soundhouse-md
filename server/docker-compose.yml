@@ -11,6 +11,18 @@ services:
 
   app:
     build: .
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     environment:
       DATABASE_URL: postgres://dima@db:5432/soundhouse-db
       ADMIN_USER: ${ADMIN_USER}
