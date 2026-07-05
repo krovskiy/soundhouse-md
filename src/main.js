@@ -85,7 +85,8 @@ document.querySelector("#app").innerHTML = /*html*/ `
     </div>
 
     <div class="showcase-container" id="showcase">
-      <h2 class="members-header">SHOWCASE</h2>
+
+      <h2 class="members-header section-header-fallback">SHOWCASE</h2>
       <div class="showcase-slideshow">
         <div class="showcase-track"></div>
         <button class="showcase-arrow showcase-prev" aria-label="previous">&#9198;</button>
@@ -96,22 +97,26 @@ document.querySelector("#app").innerHTML = /*html*/ `
     </div>
 
     <div class="members-container" id="members">
-      <h2 class="members-header">MEMBERS</h2>
+
+      <h2 class="members-header section-header-fallback">MEMBERS</h2>
       <div class="members-grid"></div>
     </div>
 
     <div class="releases-container" id="releases">
-      <h2 class="members-header">RELEASES</h2>
+
+      <h2 class="members-header section-header-fallback">RELEASES</h2>
       <div class="releases-grid"></div>
     </div>
 
     <div class="music-container" id="tracks">
-      <h2 class="members-header">TRACKS</h2>
+
+      <h2 class="members-header section-header-fallback">TRACKS</h2>
       <div class="track-list"></div>
     </div>
 
     <div class="services-container" id="prices">
-      <h2 class="members-header">SERVICES</h2>
+
+      <h2 class="members-header section-header-fallback">SERVICES</h2>
       <div class="services-grid"></div>
       <a class="services-tg-btn"
      href="https://t.me/${TELEGRAM_USER}?text=${encodeURIComponent("Привет! Хочу узнать про услуги")}"
@@ -123,7 +128,8 @@ document.querySelector("#app").innerHTML = /*html*/ `
     </div>
 
     <div class="merch-container" id="merch">
-      <h2 class="members-header">MERCH</h2>
+
+      <h2 class="members-header section-header-fallback">MERCH</h2>
       <div class="merch-grid"></div>
     </div>
 
@@ -190,7 +196,7 @@ const INTRO_TIPS = [
   "dima was here…",
   "where's the bass?",
   "loading presets",
-  "made with love in chișinău",
+  "made with love in chisinau",
   "turn it up",
 ];
 
@@ -255,6 +261,82 @@ const releasesGrid = document.querySelector(".releases-grid");
 
 let current = null;
 let instances = [];
+
+function drawHeaders() {
+  const headers = [
+    {
+      sel: "#showcase .members-header",
+      name: "showcase",
+      container: "#showcase",
+    },
+    { sel: "#members .members-header", name: "members", container: "#members" },
+    {
+      sel: "#releases .members-header",
+      name: "releases",
+      container: "#releases",
+    },
+    { sel: "#tracks .members-header", name: "tracks", container: "#tracks" },
+    { sel: "#prices .members-header", name: "services", container: "#prices" },
+    { sel: "#merch .members-header", name: "merch", container: "#merch" },
+  ];
+
+  const COUNT = 5;
+  const FRAME_MS = 180; // shuffle speed — lower = faster
+
+  headers.forEach(({ sel, name, container }) => {
+    const h2 = document.querySelector(sel);
+    const box = document.querySelector(container);
+    if (!h2 || !box) return;
+
+    const srcs = Array.from(
+      { length: COUNT },
+      (_, i) => `/headers/${name}-${i + 1}.png`,
+    );
+
+    // preload so the loop doesn't flicker on the first pass
+    srcs.forEach((s) => {
+      const im = new Image();
+      im.src = s;
+    });
+
+    const img = document.createElement("img");
+    img.className = "section-header-img";
+    img.alt = h2.textContent;
+
+    let idx = 0;
+    img.src = srcs[0];
+
+    h2.style.display = "none";
+    img.addEventListener("error", () => {
+      img.remove();
+      h2.style.display = "";
+    });
+    h2.parentNode.insertBefore(img, h2);
+
+    if (img.complete && img.naturalWidth === 0) {
+      img.remove();
+      h2.style.display = "";
+    }
+
+    let timer = null;
+
+    box.addEventListener("mouseenter", () => {
+      clearInterval(timer);
+      timer = setInterval(() => {
+        idx = (idx + 1) % COUNT;
+        img.src = srcs[idx];
+      }, FRAME_MS);
+    });
+
+    box.addEventListener("mouseleave", () => {
+      clearInterval(timer);
+      timer = null;
+      idx = 0;
+      img.src = srcs[0];
+    });
+  });
+}
+drawHeaders();
 
 function destroyTracks() {
   if (current) {
@@ -391,7 +473,7 @@ async function loadBanners() {
   const banners = await res.json();
   bannerBody.innerHTML = "";
 
-  if (banners.length == 1) {
+  if (!banners.length) {
     document.querySelector(".banner-bar").style.display = "none";
     return;
   }

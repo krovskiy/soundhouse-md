@@ -1416,7 +1416,8 @@ mark {
 :root[data-theme="light"] .services-tg-btn,
 :root[data-theme="light"] .merch-tg-btn,
 :root[data-theme="light"] .telegram-icon,
-:root[data-theme="light"] .track-wave {
+:root[data-theme="light"] .track-wave,
+:root[data-theme="light"] .section-header-img {
   filter: contrast(1.05) invert(1);
   color: white;
 }
@@ -1453,4 +1454,61 @@ mark {
   transition:
     opacity 0.15s,
     background-color 0.15s;
+}
+
+.section-header-img {
+  display: block;
+  height: 81px;
+  width: auto;
+  max-width: 100%;
+  margin: 0 0 20px;
+  opacity: 0.85;
+}
+
+body {
+  cursor:
+    url("/cursor-inverted.png") 1 1,
+    default;
+}
+
+a,
+button,
+.menu-item,
+.member-card,
+.merch-item,
+.release-link,
+.showcase-dots span,
+.tp-btn,
+.pref-btn {
+  cursor:
+    url("/cursor-pointer.png") 1 1,
+    pointer;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+/* WebKit / Chromium */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--dim);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
 }

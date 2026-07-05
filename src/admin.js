@@ -20,6 +20,35 @@ async function jsonPost(pathname, body, method = "POST") {
   return res.json();
 }
 
+// ---- toasts ----
+function toast(msg, type = "info") {
+  let stack = document.querySelector(".adm-toasts");
+  if (!stack) {
+    stack = document.createElement("div");
+    stack.className = "adm-toasts";
+    document.body.appendChild(stack);
+  }
+
+  const el = document.createElement("div");
+  el.className = `adm-toast adm-toast-${type}`;
+  el.textContent = msg;
+  stack.appendChild(el);
+
+  // trigger enter animation on next frame
+  requestAnimationFrame(() => el.classList.add("show"));
+
+  // auto-dismiss
+  const remove = () => {
+    el.classList.remove("show");
+    el.addEventListener("transitionend", () => el.remove(), { once: true });
+  };
+  const timer = setTimeout(remove, 3000);
+  el.addEventListener("click", () => {
+    clearTimeout(timer);
+    remove();
+  });
+}
+
 function esc(s) {
   return String(s ?? "").replace(
     /[&<>"']/g,
@@ -330,7 +359,7 @@ function fieldInputs(cfg, data = {}) {
           el.value = newPath;
         } catch (e) {
           console.error("FAILED AT:", e);
-          alert("upload failed: " + (e?.message || e));
+          toast("upload failed: " + (e?.message || e), "error");
         }
         file.disabled = false;
       });
@@ -418,6 +447,7 @@ async function renderSection(cfg) {
 
         for (const f of cfg.fields)
           if (f.type === "image" || f.type === "audio") deleteMedia(r[f.key]);
+        toast("deleted", "success");
         renderSection(cfg);
       });
     item
@@ -463,7 +493,7 @@ function openForm(cfg, data) {
       commit();
       renderSection(cfg);
     } catch (e) {
-      alert("save failed: " + e.message);
+      toast("save failed: " + e.message, "error");
     }
   });
 }
