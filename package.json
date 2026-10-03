@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "cropperjs": "^2.1.1",
-    "wavesurfer.js": "^7.12.12"
+    "wavesurfer.js": "^8.0.1"
   },
   "devDependencies": {
     "vite": "^8.3.0"
