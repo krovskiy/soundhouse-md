@@ -15,7 +15,7 @@
     "@fastify/helmet": "^13.0.1",
     "@fastify/multipart": "^10.0.0",
     "@fastify/rate-limit": "^11.2.0",
-    "@fastify/static": "^9.1.3",
+    "@fastify/static": "^10.1.5",
     "bcryptjs": "^3.0.3",
     "cropperjs": "^2.1.1",
     "dotenv": "^17.4.2",
